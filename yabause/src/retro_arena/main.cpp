@@ -467,12 +467,17 @@ int yabauseinit()
 
 int main(int argc, char** argv)
 {
+  /* Keep startup diagnostics visible when launched with stdout redirected. */
+  setvbuf(stdout, NULL, _IOLBF, 0);
+  setvbuf(stderr, NULL, _IOLBF, 0);
   /* Let SDL load the Mali EGL/GLES libraries. libEGL.so.1 is the Mesa build on
      this platform; mixing it with Mali GLES makes the graphics init fail
      without an error message. overwrite=0 keeps an externally set value.
      Must come before SDL_Init(). */
+#if !defined(YAB_TARGET_H700)
   setenv("SDL_VIDEO_EGL_DRIVER", "libEGL.so",    0);
   setenv("SDL_VIDEO_GL_DRIVER",  "libGLESv2.so", 0);
+#endif
 
   inputmng = InputManager::getInstance();
   
@@ -537,6 +542,8 @@ int main(int argc, char** argv)
     }
 		else if(( x == "-v" || x == "--version") ) {
       printf("YabaSanshiro version %s(%s)\n",YAB_VERSION, GIT_SHA1 );
+      printf("H700/muOS adaptation: D4n1984, based on Pirry Edition and Yaba Sanshiro by devMiyax / Yabause.\n");
+      printf("Source: https://github.com/D4n1984/yabasanshiro-h700\n");
       return 0;
     }
 	}
@@ -588,13 +595,25 @@ int main(int argc, char** argv)
             size_t sl = path_str.find_last_of('/');
             goal = (sl == std::string::npos ? std::string("") : path_str.substr(0, sl + 1)) + first_name;
           }
-          strncpy(cdpath, goal.c_str(), sizeof(cdpath) - 1);
-          cdpath[sizeof(cdpath) - 1] = 0;
+          if (goal.size() >= sizeof(cdpath)) {
+            fprintf(stderr, "playlist disc path exceeds %zu bytes: %s\n", sizeof(cdpath) - 1, goal.c_str());
+            return 2;
+          }
+          FILE *disc = fopen(goal.c_str(), "rb");
+          if (!disc) {
+            fprintf(stderr, "cannot read first playlist disc: %s\n", goal.c_str());
+            return 2;
+          }
+          fclose(disc);
+          fprintf(stderr, "[playlist] %s -> %s\n", path_str.c_str(), goal.c_str());
+          snprintf(cdpath, sizeof(cdpath), "%s", goal.c_str());
         } else {
           fprintf(stderr, "%s contains no disc\n", cdpath);
+          return 2;
         }
       } else {
         fprintf(stderr, "cannot read %s\n", cdpath);
+        return 2;
       }
     }
   }
@@ -637,7 +656,11 @@ int main(int argc, char** argv)
 	//SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
 
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,  SDL_GL_CONTEXT_PROFILE_ES);
+#if defined(YAB_TARGET_H700)
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+#else
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+#endif
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 
 		SDL_GL_SetAttribute(SDL_GL_RED_SIZE,           8);

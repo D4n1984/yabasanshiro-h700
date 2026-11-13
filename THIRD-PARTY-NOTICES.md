@@ -1,8 +1,6 @@
 # Third-party components
 
-Yaba Sanshiro Pirry Edition is distributed under the GNU General Public License
-version 2 or later (see `LICENSE`). The binary for the R36S contains or uses the
-following components. Their license texts are in the source tree at the paths given.
+YabaSanshiro H700, a fork of Yaba Sanshiro Pirry, is distributed under the GNU General Public License version 2 or later (see `LICENSE`). It builds on the work of the Yabause team, devMiyax and Pirry; the H700 adaptation is by D4n1984. The project contains or uses the following components. Their license texts are in the source tree at the paths given.
 
 | Component | Use | License | Source / path |
 |---|---|---|---|

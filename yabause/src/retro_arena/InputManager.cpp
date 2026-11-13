@@ -136,7 +136,7 @@ uint32_t genidjson( int user, int joyId, const json & result ){
       return MAKE_PAD(0,((joyId << 18)|SDL_MAX_AXIS_VALUE|result["id"].get<int>() ));
     }
   }else if( result["type"] == "hat" ){
-    return MAKE_PAD(0, (joyId << 18) | SDL_HAT_VALUE | ( (result["value"].get<int>()) <<4));
+    return MAKE_PAD(0, (joyId << 18) | SDL_HAT_VALUE | ( (result["value"].get<int>()) <<4) | result["id"].get<int>());
   }else if( result["type"] == "key" ){
     return result["id"].get<int>() | KEYBOARD_MASK ;
   }
@@ -237,7 +237,7 @@ static void syncMenuInputNames( int deviceId, const json & dev ){
   InputConfig * cfg = InputManager::getInstance()->getInputConfigByDevice(deviceId);
   if( cfg == NULL ) return;
   // "up"/"down"/"left"/"right" are mirrored too, so menu navigation works.
-  static const char * kMenuNames[] = { "select", "start", "up", "down", "left", "right" };
+  static const char * kMenuNames[] = { "select", "start", "menu", "up", "down", "left", "right" };
   for( auto name : kMenuNames ){
     if( dev.find(name) == dev.end() ) continue;
     json f = dev[name];
@@ -340,6 +340,13 @@ int mapKeys( const json & configs ){
           json dev = configs[ name_guid ];
           setPlayerKeys( padbits, user, joyId, dev );
           syncMenuInputNames( joyId, dev );
+#ifdef YAB_TARGET_H700
+          // The physical confirm/back buttons vary across SDL controllers.
+          if (dev.find("a") != dev.end() && dev["a"].value("type", std::string("")) == "button" && dev["a"].value("id", -1) >= 0)
+            g_menu_confirm_btn = dev["a"]["id"].get<int>();
+          if (dev.find("b") != dev.end() && dev["b"].value("type", std::string("")) == "button" && dev["b"].value("id", -1) >= 0)
+            g_menu_back_btn = dev["b"]["id"].get<int>();
+#endif
         }
       }
     }
@@ -453,6 +460,9 @@ void InputManager::updateConfig(){
     Input result_start;
     it2->second->getInputByName("start", &result_start);
     tmp.start_button_ = result_start.id;
+    Input result_menu;
+    it2->second->getInputByName("menu", &result_menu);
+    if (result_menu.type == TYPE_BUTTON) tmp.menu_button_ = result_menu.id;
     menu_inputs_.push_back(tmp);
   }
 }
@@ -528,40 +538,45 @@ int getPlayerJsonFromInputConfig( int joy, InputConfig * inputconfig, json & pla
   }
 
   Input result;
-  inputconfig->getInputByName("a", &result);
+  const auto lookup = [inputconfig](const char* name) {
+    Input value(DEVICE_KEYBOARD, TYPE_BUTTON, -1, 0, false);
+    inputconfig->getInputByName(name, &value);
+    return value;
+  };
+  result = lookup("a");
   player[guid]["a"] ={ { "type", input_types[result.type] },{ "id", result.id },{ "value", result.value } };
 
-  inputconfig->getInputByName("b", &result);
+  result = lookup("b");
   player[guid]["b"] = { { "type", input_types[result.type] },{ "id", result.id },{ "value", result.value } };
 
-  inputconfig->getInputByName("rightshoulder", &result);
+  result = lookup("rightshoulder");
   player[guid]["c"] = { { "type", input_types[result.type] },{ "id", result.id },{ "value", result.value } } ;
 
-  inputconfig->getInputByName("x", &result);
+  result = lookup("x");
   player[guid]["x"] = { { "type", input_types[result.type] },{ "id", result.id },{ "value", result.value } };
 
-  inputconfig->getInputByName("y", &result);
+  result = lookup("y");
   player[guid]["y"] = { { "type", input_types[result.type] },{ "id", result.id },{ "value", result.value } };
 
-  inputconfig->getInputByName("leftshoulder", &result);
+  result = lookup("leftshoulder");
   player[guid]["z"] = { { "type", input_types[result.type] },{ "id", result.id },{ "value", result.value } };
 
-  inputconfig->getInputByName("lefttrigger", &result);
+  result = lookup("lefttrigger");
   player[guid]["l"] = { { "type", input_types[result.type] },{ "id", result.id },{ "value", result.value } } ;
 
-  inputconfig->getInputByName("righttrigger", &result);
+  result = lookup("righttrigger");
   player[guid]["r"] = { { "type", input_types[result.type] },{ "id", result.id },{ "value", result.value } };
 
-  inputconfig->getInputByName("up", &result);
+  result = lookup("up");
   player[guid]["up"] = { { "type", input_types[result.type] },{ "id", result.id },{ "value", result.value } };
 
-  inputconfig->getInputByName("down", &result);
+  result = lookup("down");
   player[guid]["down"] = { { "type", input_types[result.type] },{ "id", result.id },{ "value", result.value } };
 
-  inputconfig->getInputByName("left", &result);
+  result = lookup("left");
   player[guid]["left"] = { { "type", input_types[result.type] },{ "id", result.id },{ "value", result.value } };
 
-  inputconfig->getInputByName("right", &result);
+  result = lookup("right");
   player[guid]["right"] = { { "type", input_types[result.type] },{ "id", result.id },{ "value", result.value } };
 
   //inputconfig->getInputByName("leftanalogup", &result);
@@ -576,11 +591,15 @@ int getPlayerJsonFromInputConfig( int joy, InputConfig * inputconfig, json & pla
   //inputconfig->getInputByName("leftanalogright", &result);
   player[guid]["analogright"] = { { "type", "axis" },{ "id", 5 },{ "value", 0 } };
 
-  inputconfig->getInputByName("start", &result);
+  result = lookup("start");
   player[guid]["start"] = { { "type", input_types[result.type] },{ "id", result.id },{ "value", result.value } };
 
-  inputconfig->getInputByName("select", &result);
+  result = lookup("select");
   player[guid]["select"] = { { "type", input_types[result.type] },{ "id", result.id },{ "value", result.value } };
+
+  result = lookup("menu");
+  if (result.id >= 0)
+    player[guid]["menu"] = { { "type", input_types[result.type] },{ "id", result.id },{ "value", result.value } };
 
 
   return 0;
@@ -664,7 +683,7 @@ void InputManager::init( const std::string & fname )
   if(initialized())
     deinit();
 
-  SDL_InitSubSystem(SDL_INIT_JOYSTICK);
+  SDL_InitSubSystem(SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER);
   SDL_JoystickEventState(SDL_ENABLE);
 
   // first, open all currently present joysticks
@@ -737,6 +756,9 @@ void InputManager::init( const std::string & fname )
     Input result_start;
     it->second->getInputByName("start", &result_start);
     tmp.start_button_ = result_start.id;
+    Input result_menu;
+    it->second->getInputByName("menu", &result_menu);
+    if (result_menu.type == TYPE_BUTTON) tmp.menu_button_ = result_menu.id;
     menu_inputs_.push_back(tmp);
   }
 }
@@ -828,7 +850,7 @@ void InputManager::deinit()
   }
 
   SDL_JoystickEventState(SDL_DISABLE);
-  SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
+  SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_JOYSTICK);
 }
 
 
@@ -1135,7 +1157,7 @@ bool InputManager::parseEventMenu(const SDL_Event& ev ){
         }
       }
     if( SDL_JOYBUTTONUP == ev.type && 
-       ( evstr.size() > 0 && (evstr[0]=="b" || evstr[0]=="select") )  ){
+       ( evstr.size() > 0 && (evstr[0]=="b" || evstr[0]=="select" || evstr[0]=="menu") )  ){
       if( menu_layer_->onBackButtonPressed() == 0 ){
         SDL_Event event = {};
         event.type = showmenu_;
@@ -1209,12 +1231,12 @@ bool InputManager::parseEvent(const SDL_Event& ev)
   {
   case SDL_JOYBUTTONUP:{
     for( int i=0; i<menu_inputs_.size(); i++  ){
-         if( ev.jbutton.button == menu_inputs_[i].select_button_ && 
+         if( (ev.jbutton.button == menu_inputs_[i].select_button_ || ev.jbutton.button == menu_inputs_[i].menu_button_) &&
              ev.jbutton.which == menu_inputs_[i].select_device_ ){
         /* Select+Start = quit: if Start is held when Select is released, exit
            cleanly instead of opening the menu. */
         SDL_Joystick *jy_quit = SDL_JoystickFromInstanceID(ev.jbutton.which);
-        bool start_held = jy_quit && (int)menu_inputs_[i].start_button_ >= 0 &&
+        bool start_held = ev.jbutton.button == menu_inputs_[i].select_button_ && jy_quit && (int)menu_inputs_[i].start_button_ >= 0 &&
             SDL_JoystickGetButton(jy_quit, menu_inputs_[i].start_button_);
         if (start_held) {
           SDL_Event qev = {}; qev.type = SDL_QUIT; SDL_PushEvent(&qev);
@@ -1264,6 +1286,67 @@ bool InputManager::parseEvent(const SDL_Event& ev)
   return false;
 }
 
+// Translate SDL's logical controller bindings back to raw joystick events,
+// which are what the emulator and its menu consume. Axis bindings are omitted:
+// SDL's bind API does not expose half-axis polarity or inversion.
+static bool loadSDLControllerConfig(InputConfig* config)
+{
+  if (config->getDeviceId() == DEVICE_KEYBOARD) return false;
+  for (int i = 0; i < SDL_NumJoysticks(); ++i) {
+    if (!SDL_IsGameController(i)) continue;
+    SDL_GameController* controller = SDL_GameControllerOpen(i);
+    if (!controller) continue;
+    SDL_Joystick* joy = SDL_GameControllerGetJoystick(controller);
+    if (!joy || SDL_JoystickInstanceID(joy) != config->getDeviceId()) {
+      SDL_GameControllerClose(controller);
+      continue;
+    }
+
+    struct ButtonBinding { const char* name; SDL_GameControllerButton button; };
+    static const ButtonBinding buttons[] = {
+      {"a", SDL_CONTROLLER_BUTTON_A}, {"b", SDL_CONTROLLER_BUTTON_B},
+      {"x", SDL_CONTROLLER_BUTTON_X}, {"y", SDL_CONTROLLER_BUTTON_Y},
+      {"leftshoulder", SDL_CONTROLLER_BUTTON_LEFTSHOULDER},
+      {"rightshoulder", SDL_CONTROLLER_BUTTON_RIGHTSHOULDER},
+      {"up", SDL_CONTROLLER_BUTTON_DPAD_UP}, {"down", SDL_CONTROLLER_BUTTON_DPAD_DOWN},
+      {"left", SDL_CONTROLLER_BUTTON_DPAD_LEFT}, {"right", SDL_CONTROLLER_BUTTON_DPAD_RIGHT},
+      {"start", SDL_CONTROLLER_BUTTON_START}, {"select", SDL_CONTROLLER_BUTTON_BACK},
+      {"menu", SDL_CONTROLLER_BUTTON_GUIDE}
+    };
+    config->clear();
+    int mapped = 0;
+    for (const auto& entry : buttons) {
+      SDL_GameControllerButtonBind bind = SDL_GameControllerGetBindForButton(controller, entry.button);
+      if (bind.bindType == SDL_CONTROLLER_BINDTYPE_BUTTON) {
+        config->mapInput(entry.name, Input(config->getDeviceId(), TYPE_BUTTON, bind.value.button, 1, true));
+        ++mapped;
+      } else if (bind.bindType == SDL_CONTROLLER_BINDTYPE_HAT) {
+        config->mapInput(entry.name, Input(config->getDeviceId(), TYPE_HAT, bind.value.hat.hat, bind.value.hat.hat_mask, true));
+        ++mapped;
+      }
+    }
+    struct TriggerBinding { const char* name; SDL_GameControllerAxis axis; };
+    static const TriggerBinding triggers[] = {
+      {"lefttrigger", SDL_CONTROLLER_AXIS_TRIGGERLEFT}, {"righttrigger", SDL_CONTROLLER_AXIS_TRIGGERRIGHT}
+    };
+    for (const auto& entry : triggers) {
+      SDL_GameControllerButtonBind bind = SDL_GameControllerGetBindForAxis(controller, entry.axis);
+      if (bind.bindType == SDL_CONTROLLER_BINDTYPE_BUTTON) {
+        config->mapInput(entry.name, Input(config->getDeviceId(), TYPE_BUTTON, bind.value.button, 1, true));
+        ++mapped;
+      } else if (bind.bindType == SDL_CONTROLLER_BINDTYPE_HAT) {
+        config->mapInput(entry.name, Input(config->getDeviceId(), TYPE_HAT, bind.value.hat.hat, bind.value.hat.hat_mask, true));
+        ++mapped;
+      }
+    }
+    SDL_GameControllerClose(controller);
+    fprintf(stderr, "SDL controller fallback: %s (instance %d), %d bindings\n", config->getDeviceName().c_str(), config->getDeviceId(), mapped);
+    return mapped > 0;
+  }
+  fprintf(stderr, "SDL controller fallback unavailable: %s (instance %d)\n", config->getDeviceName().c_str(), config->getDeviceId());
+  return false;
+}
+
 bool InputManager::loadInputConfig(InputConfig* config)
 {
   std::string path = getConfigPath();
@@ -1283,7 +1366,7 @@ bool InputManager::loadInputConfig(InputConfig* config)
   }
   if(!fs::exists(path)){
     PADLOG("loadInputConfig %s is not found!\n", path.c_str() );
-    return false;
+    return loadSDLControllerConfig(config);
   }
     
   pugi::xml_document doc;
@@ -1292,20 +1375,21 @@ bool InputManager::loadInputConfig(InputConfig* config)
   if(!res)
   {
 //    LOG(LogError) << "Error parsing input config: " << res.description();
-    return false;
+    return loadSDLControllerConfig(config);
   }
 
   pugi::xml_node root = doc.child("inputList");
   if(!root)
-    return false;
+    return loadSDLControllerConfig(config);
 
   pugi::xml_node configNode = root.find_child_by_attribute("inputConfig", "deviceGUID", config->getDeviceGUIDString().c_str());
   if(!configNode)
     configNode = root.find_child_by_attribute("inputConfig", "deviceName", config->getDeviceName().c_str());
   if(!configNode)
-    return false;
+    return loadSDLControllerConfig(config);
 
   config->loadFromXML(configNode);
+  if (!config->isConfigured()) return loadSDLControllerConfig(config);
   return true;
 }
 

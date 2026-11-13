@@ -37,6 +37,7 @@ struct MenuInput {
 	uint32_t select_button_ = -1;
 	SDL_JoystickID select_device_ = -1;
 	uint32_t start_button_ = -1; /* Select+Start quits the game */
+	uint32_t menu_button_ = -1;
 };
 
 typedef std::map<std::string, int *> pre_input_map;

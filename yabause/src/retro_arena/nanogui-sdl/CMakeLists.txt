@@ -3,7 +3,7 @@ cmake_minimum_required (VERSION 2.8.3)
 project("NanoGUI-SDL")
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    set(CMAKE_CXX_FLAGS "-std=c++11")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 endif()
 
 if(NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ext/eigen/Eigen")
@@ -117,7 +117,18 @@ endif()
 include_directories(ext ext/eigen include ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 # Run simple C converter to put font files into the data segment
-add_executable(bin2c resources/bin2c.c)
+if(CMAKE_CROSSCOMPILING)
+  find_program(HOST_C_COMPILER NAMES cc gcc REQUIRED)
+  set(BIN2C_EXECUTABLE "${CMAKE_CURRENT_BINARY_DIR}/bin2c-host")
+  add_custom_command(OUTPUT "${BIN2C_EXECUTABLE}"
+    COMMAND "${HOST_C_COMPILER}" "${CMAKE_CURRENT_SOURCE_DIR}/resources/bin2c.c"
+            -o "${BIN2C_EXECUTABLE}"
+    DEPENDS resources/bin2c.c VERBATIM)
+  add_custom_target(bin2c DEPENDS "${BIN2C_EXECUTABLE}")
+else()
+  add_executable(bin2c resources/bin2c.c)
+  set(BIN2C_EXECUTABLE "$<TARGET_FILE:bin2c>")
+endif()
 set(bin2c_cmdline nanogui_resources.cpp nanogui_resources.h)
 file(GLOB resources "${CMAKE_CURRENT_SOURCE_DIR}/resources/*.ttf")
 foreach(file ${resources})
@@ -127,7 +138,7 @@ endforeach()
 # Run bin2c on resource files
 add_custom_command(
   OUTPUT nanogui_resources.cpp nanogui_resources.h
-  COMMAND ./bin2c ARGS ${bin2c_cmdline}
+  COMMAND "${BIN2C_EXECUTABLE}" ${bin2c_cmdline}
   DEPENDS bin2c ${resources}
   COMMENT "Running bin2c"
   PRE_BUILD VERBATIM)

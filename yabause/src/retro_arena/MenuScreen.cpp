@@ -103,7 +103,7 @@ MenuScreen::MenuScreen( SDL_Window* pwindow, int rwidth, int rheight, const std:
   imageWindow = nullptr;
 
 
-  std::string title = "Yaba Sanshiro "+ std::string(YAB_VERSION) +" Pirry Edition";
+  std::string title = "YabaSanshiro H700 - D4n1984";
         window = new Window(this, title);
         window->setPosition(Vector2i(0, 0));
         window->setLayout(new GroupLayout(6));
@@ -324,25 +324,25 @@ MenuScreen::MenuScreen( SDL_Window* pwindow, int rwidth, int rheight, const std:
             l->setFixedWidth(w);
             return l;
           };
-          /* the two project pages stand out: bold and coloured */
+          /* Keep the H700 fork and its upstream credits visible on the handheld. */
           auto link = [&line](const std::string & s) {
-            Label * l = line(s, 18);
+            Label * l = line(s, 16);
             l->setFont("sans-bold");
             l->setColor(Color(120, 200, 255, 255));
           };
-          line("Yaba Sanshiro " + std::string(YAB_VERSION) + " Pirry Edition", 22);
-          line("Sega Saturn emulator for the R36S handheld, based on Yaba Sanshiro by devMiyax, "
-               "which is based on Yabause.", 16);
-          link("Source code: github.com/pirrypirrypirry/yabasanshiro-pirry");
-          link("Releases: github.com/pirrypirrypirry/yabasanshiro-pirry-release");
-          line("Thanks to devMiyax, the Yabause team and RetroAchievements (rcheevos).", 16);
-          line("License: GNU General Public License version 2 or later. Included components and "
-               "their licenses: THIRD-PARTY-NOTICES.md in the source code.", 16);
-          line("Privacy: nothing is sent unless you log in to RetroAchievements. Then the user name, "
-               "the password (only for the first login), the game disc hash, unlocks and the game status "
-               "go to retroachievements.org; the privacy policy of retroachievements.org applies there. "
-               "This program has no server and no telemetry. On the device only the user name and a "
-               "login token are kept, in ~/.yabasanshiro/retroachievements.cfg, until you log out.", 16);
+          line("YabaSanshiro H700 / muOS", 22);
+          line("H700 adaptation: D4n1984.", 16);
+          line("Based on YabaSanshiro Pirry Edition " + std::string(YAB_VERSION) + ".", 16);
+          line("Thanks to Pirry for the dynarec, graphics, audio and menu improvements.", 16);
+          line("Original emulator: Yaba Sanshiro by devMiyax and the Yabause team. "
+               "Thanks also to RetroAchievements (rcheevos).", 16);
+          link("H700 source/releases: github.com/D4n1984/yabasanshiro-h700");
+          link("Pirry upstream: github.com/pirrypirrypirry/yabasanshiro-pirry");
+          line("License: GPL version 2 or later. See LICENSE and THIRD-PARTY-NOTICES.md.", 16);
+          line("Privacy: networking is used only for optional RetroAchievements login and game activity. "
+               "Login sends your user name and password; subsequent activity sends disc hashes, unlocks "
+               "and game status to retroachievements.org, whose privacy policy applies. Your user name "
+               "and login token remain locally until logout. No telemetry or dedicated server.", 14);
           Button *btn = new Button(imageWindow, "Close");
           btn->setCallback([this]() {
             this->popActiveMenu();
