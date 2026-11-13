@@ -1,8 +1,12 @@
 # YabaSanshiro H700
 
-This is [@D4n1984](https://github.com/D4n1984)'s H700 adaptation of [Pirry's fork](https://github.com/pirrypirrypirry/yabasanshiro-pirry), targeting RG34XXSP with muOS. It is a standalone AArch64 Sega Saturn emulator using the SH-2 dynarec and EGL/OpenGL ES 3. Find the source in [this fork](https://github.com/D4n1984/yabasanshiro-h700); its [releases page](https://github.com/D4n1984/yabasanshiro-h700/releases) is the destination for future builds.
+This is [@D4n1984](https://github.com/D4n1984)'s H700 adaptation of [Pirry's fork](https://github.com/pirrypirrypirry/yabasanshiro-pirry), targeting RG34XXSP with muOS. It is a standalone AArch64 Sega Saturn emulator using the SH-2 dynarec and EGL/OpenGL ES 3. Download the ready-to-install muOS package from [Releases](https://github.com/D4n1984/yabasanshiro-h700/releases/latest).
 
 The repository does not contain binaries, BIOS files, ROMs or save states. See the [muOS package guide](packaging/muos-h700/README.md) for installation and limitations.
+
+## Apoyar el proyecto
+
+Si quieres apoyar el trabajo, puedes hacerlo en [Buy Me a Coffee](https://buymeacoffee.com/danielgarciagarcia).
 
 ## Credits and contributions
 

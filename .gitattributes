@@ -1,4 +1,6 @@
 scripts/*.sh text eol=lf
 scripts/*.py text eol=lf
 packaging/muos-h700/*.sh text eol=lf
+packaging/muos-h700/*.py text eol=lf
+tests/*.py text eol=lf
 cmake/toolchains/*.cmake text eol=lf
